@@ -1,0 +1,63 @@
+table 'Categorías falla'
+	lineageTag: b14ee950-4b5a-58a8-a798-cd39f81022aa
+
+	column Categoría
+		dataType: string
+		lineageTag: 3147a791-2ddc-57fb-92c9-20c127135235
+		summarizeBy: none
+		sourceColumn: Categoría
+		sortByColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Orden
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 5f8c2e39-4c10-5f9b-8f28-50c49dacd991
+		summarizeBy: none
+		sourceColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Color
+		dataType: string
+		isHidden
+		lineageTag: c2275da2-ffbf-533e-8b09-39aa3026d13c
+		summarizeBy: none
+		sourceColumn: Color
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Categorías falla' = m
+		mode: import
+		source =
+				let
+				    // Categorías de falla (mismo orden de prioridad que la regla de clasificación)
+				    Tabla = #table(type table [Categoría = text, Orden = Int64.Type, Color = text], {
+				        {"Irreparable / destrucción", 1, "#9B2C1F"},
+				        {"Líquido / humedad", 2, "#0EA5E9"},
+				        {"Pantalla / display", 3, "#2F6BFF"},
+				        {"Placa / electrónica", 4, "#7C4DFF"},
+				        {"Batería", 5, "#E6B800"},
+				        {"Tapa / carcasa / marco", 6, "#8A5A44"},
+				        {"Adhesivo / prensado", 7, "#00A3A3"},
+				        {"Software / cuenta", 8, "#6366F1"},
+				        {"Audio", 9, "#EC4899"},
+				        {"No enciende / carga", 10, "#F97316"},
+				        {"Cámara / sensores / botones", 11, "#14B8A6"},
+				        {"Señal / conectividad", 12, "#84CC16"},
+				        {"Cosmético", 13, "#A78BFA"},
+				        {"Caja / embalaje / accesorios", 14, "#94A3B8"},
+				        {"Limpieza", 15, "#22C55E"},
+				        {"Espera de partes", 16, "#E8A317"},
+				        {"Retrabajo por FAIL", 17, "#D4533B"},
+				        {"Presupuesto / cliente", 18, "#64748B"},
+				        {"Administrativo / etiquetas", 19, "#475569"},
+				        {"Validación de scrap", 20, "#7C3AED"},
+				        {"Sin falla / OK", 21, "#1F9D63"}})
+				in
+				    Tabla
+
+	annotation PBI_ResultType = Table
+

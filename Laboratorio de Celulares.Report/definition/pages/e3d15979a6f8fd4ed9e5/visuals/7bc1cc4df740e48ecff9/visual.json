@@ -1,0 +1,457 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "7bc1cc4df740e48ecff9",
+  "position": {
+    "x": 20,
+    "y": 134,
+    "z": 11000,
+    "height": 576,
+    "width": 1240,
+    "tabOrder": 11000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Fecha"
+                }
+              },
+              "queryRef": "Registros.Fecha",
+              "nativeQueryRef": "Fecha",
+              "active": true,
+              "displayName": "Fecha"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Identificador"
+                }
+              },
+              "queryRef": "Registros.Identificador",
+              "nativeQueryRef": "Identificador",
+              "active": true,
+              "displayName": "IMEI / serie"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Técnico"
+                }
+              },
+              "queryRef": "Registros.Técnico",
+              "nativeQueryRef": "Técnico",
+              "active": true,
+              "displayName": "Técnico"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Puesto"
+                }
+              },
+              "queryRef": "Registros.Puesto",
+              "nativeQueryRef": "Puesto",
+              "active": true,
+              "displayName": "Puesto"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Estado"
+                }
+              },
+              "queryRef": "Registros.Estado",
+              "nativeQueryRef": "Estado",
+              "active": true,
+              "displayName": "Estado"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Negocio"
+                }
+              },
+              "queryRef": "Registros.Negocio",
+              "nativeQueryRef": "Negocio",
+              "active": true,
+              "displayName": "Negocio"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Nivel de reparación"
+                }
+              },
+              "queryRef": "Registros.Nivel de reparación",
+              "nativeQueryRef": "Nivel de reparación",
+              "active": true,
+              "displayName": "Nivel"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Resultado OQC"
+                }
+              },
+              "queryRef": "Registros.Resultado OQC",
+              "nativeQueryRef": "Resultado OQC",
+              "active": true,
+              "displayName": "Control"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "N° de reparación"
+                }
+              },
+              "queryRef": "Registros.N° de reparación",
+              "nativeQueryRef": "N° de reparación",
+              "active": true,
+              "displayName": "N° rep."
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Resultado control posterior"
+                }
+              },
+              "queryRef": "Registros.Resultado control posterior",
+              "nativeQueryRef": "Resultado control posterior",
+              "active": true,
+              "displayName": "Control post rep."
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Categoría principal"
+                }
+              },
+              "queryRef": "Registros.Categoría principal",
+              "nativeQueryRef": "Categoría principal",
+              "active": true,
+              "displayName": "Falla principal"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Observación"
+                }
+              },
+              "queryRef": "Registros.Observación",
+              "nativeQueryRef": "Observación",
+              "active": true,
+              "displayName": "Observación"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Hoja"
+                }
+              },
+              "queryRef": "Registros.Hoja",
+              "nativeQueryRef": "Hoja",
+              "active": true,
+              "displayName": "Hoja"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Registros"
+                    }
+                  },
+                  "Property": "Fila Excel"
+                }
+              },
+              "queryRef": "Registros.Fila Excel",
+              "nativeQueryRef": "Fila Excel",
+              "active": true,
+              "displayName": "Fila"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Registros"
+                  }
+                },
+                "Property": "Fecha"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "columnHeaders": [
+        {
+          "properties": {
+            "backColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0F2A44'"
+                    }
+                  }
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#FFFFFF'"
+                    }
+                  }
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "10D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Registros'"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "11D"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0F2A44'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#FFFFFF'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#DDE3EA'"
+                    }
+                  }
+                }
+              }
+            },
+            "radius": {
+              "expr": {
+                "Literal": {
+                  "Value": "8D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

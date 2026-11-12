@@ -1,0 +1,301 @@
+table Desbloqueos
+	lineageTag: c88f59fe-0576-553b-904e-236d27bb4724
+
+	column Fecha
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 09ec5eaf-39a2-5ab9-871e-edeacc7bcb9c
+		summarizeBy: none
+		sourceColumn: Fecha
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Alerta fecha'
+		dataType: string
+		lineageTag: a342b8c2-2163-53e7-87aa-b66600f07097
+		summarizeBy: none
+		sourceColumn: Alerta fecha
+
+		annotation SummarizationSetBy = Automatic
+
+	column IMEI
+		dataType: string
+		lineageTag: 93fea4b8-1e21-53f0-8ab6-f0017e84176b
+		summarizeBy: none
+		sourceColumn: IMEI
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Tipo de identificador'
+		dataType: string
+		lineageTag: 115c125e-7c39-5054-9189-3d3d3cb719f0
+		summarizeBy: none
+		sourceColumn: Tipo de identificador
+
+		annotation SummarizationSetBy = Automatic
+
+	column Tipo
+		dataType: string
+		lineageTag: 25147b25-3e7f-502f-8fed-639d23bb0007
+		summarizeBy: none
+		sourceColumn: Tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column Técnico
+		dataType: string
+		lineageTag: 30ac4b8d-3fa9-50be-a6bb-d9362618fc6e
+		summarizeBy: none
+		sourceColumn: Técnico
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Fila Excel'
+		dataType: int64
+		formatString: 0
+		lineageTag: a25a872f-ca76-5a70-95bb-7aa993178274
+		summarizeBy: none
+		sourceColumn: Fila Excel
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Desbloqueos = m
+		mode: import
+		source =
+				let
+				    // ---- funciones auxiliares (ver comentarios en cada una)
+				    fxClave =
+				        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+				        (v as any) as nullable text =>
+				        let
+				            Texto =
+				                if v = null then null
+				                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+				                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+				                else Text.From(v),
+				            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+				                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+				                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+				            Mayus = if Texto = null then null else Text.Upper(Texto),
+				            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+				            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+				            Espacios = if SinTildes = null then null
+				                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+				            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+				            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+				        in
+				            if Limpio = null or Limpio = "" then null else Limpio,
+				    fxFecha =
+				        // Interpreta una fecha cargada como fecha, número de serie de Excel o texto ("21/1", "22-1", "28/05/2026")
+				        (v as any) as record =>
+				        let
+				            Vacio = [Fecha = null, Dia = null, Mes = null, Texto = false, Parcial = false, Ilegible = false],
+				            Resultado =
+				                if v = null then Vacio
+				                else if Value.Is(v, type date) then Vacio & [Fecha = v]
+				                else if Value.Is(v, type datetime) then Vacio & [Fecha = Date.From(v)]
+				                else if Value.Is(v, type datetimezone) then Vacio & [Fecha = Date.From(DateTimeZone.RemoveZone(v))]
+				                else if Value.Is(v, type number) then
+				                    (if v >= 1 and v < 2958466 then Vacio & [Fecha = Date.From(v)] else Vacio & [Ilegible = true])
+				                else
+				                    let
+				                        t = Text.Trim(Text.Replace(Text.From(v), "#(00A0)", " ")),
+				                        Partes = List.Select(Text.SplitAny(t, "/-. "), each _ <> ""),
+				                        Numeros = List.Transform(Partes, each try Number.From(_, "en-US") otherwise null),
+				                        TodoNum = List.Count(Partes) >= 2 and List.Count(Partes) <= 3
+				                            and List.NonNullCount(Numeros) = List.Count(Partes)
+				                            and List.AllTrue(List.Transform(Partes, each Text.Length(_) <= 4)),
+				                        D = if TodoNum then Numeros{0} else null,
+				                        M = if TodoNum then Numeros{1} else null,
+				                        A0 = if TodoNum and List.Count(Numeros) = 3 then Numeros{2} else null,
+				                        A = if A0 = null then null else if A0 < 100 then 2000 + A0 else A0
+				                    in
+				                        if t = "" then Vacio
+				                        else if TodoNum and A <> null then
+				                            (try Vacio & [Fecha = #date(A, M, D), Texto = true] otherwise Vacio & [Ilegible = true, Texto = true])
+				                        else if TodoNum and D >= 1 and D <= 31 and M >= 1 and M <= 12 then
+				                            Vacio & [Dia = D, Mes = M, Parcial = true, Texto = true]
+				                        else
+				                            (try Vacio & [Fecha = Date.From(DateTime.FromText(t, [Culture = "es-AR"])), Texto = true]
+				                             otherwise Vacio & [Ilegible = true, Texto = true])
+				        in
+				            Resultado,
+				    fxResolverFecha =
+				        // Decide la fecha final de una fila. "ref" es la última fecha válida de las filas anteriores de la misma hoja.
+				        // Corrige: año mal tipeado (2023 en una hoja de 2026), día/mes invertidos, fecha sin año y fecha vacía.
+				        (info as record, ref as nullable date, hoy as date, minimo as date) as record =>
+				        let
+				            AnioRef = if ref <> null then Date.Year(ref) else Date.Year(hoy),
+				            Armar = (a as number, m as number, d as number) => try #date(a, m, d) otherwise null,
+				            EnRango = (f) => f <> null and f >= minimo and f <= hoy,
+				            Imputar = (motivo as text) => [Fecha = ref, Alerta = if ref <> null then motivo & " (se usó la fila anterior)" else "Sin fecha"],
+				            f = info[Fecha],
+				            Resultado =
+				                if f <> null then
+				                    if EnRango(f) then [Fecha = f, Alerta = if info[Texto] then "Fecha cargada como texto" else null]
+				                    else
+				                        let
+				                            Invertida = if f > hoy then Armar(Date.Year(f), Date.Day(f), Date.Month(f)) else null,
+				                            ConAnio = Armar(AnioRef, Date.Month(f), Date.Day(f))
+				                        in
+				                            if EnRango(Invertida) then [Fecha = Invertida, Alerta = "Fecha con día y mes invertidos"]
+				                            else if EnRango(ConAnio) then [Fecha = ConAnio, Alerta = "Fecha con año corregido"]
+				                            else Imputar("Fecha fuera de rango")
+				                else if info[Parcial] then
+				                    let
+				                        c1 = Armar(AnioRef, info[Mes], info[Dia]),
+				                        c2 = if EnRango(c1) then c1 else Armar(AnioRef - 1, info[Mes], info[Dia])
+				                    in
+				                        if EnRango(c2) then [Fecha = c2, Alerta = "Fecha sin año (año inferido)"] else Imputar("Fecha ilegible")
+				                else if info[Ilegible] then Imputar("Fecha ilegible")
+				                else Imputar("Fecha vacía")
+				        in
+				            Resultado,
+				    fxFechasTabla =
+				        // Agrega [Fecha], [Alerta fecha] y [Fecha directa] a una tabla en el orden de la hoja.
+				        // Las filas sin fecha (o con fecha imposible) toman la última fecha válida de las filas anteriores.
+				        (t as table, columna as text, hoy as date, minimo as date) as table =>
+				        let
+				            ConInfo = Table.AddColumn(t, "__Info", each fxFecha(Record.Field(_, columna))),
+				            ConRef = Table.AddColumn(ConInfo, "__Ref", each
+				                let f = [__Info][Fecha] in if f <> null and f >= minimo and f <= hoy then f else null),
+				            Relleno = Table.FillDown(ConRef, {"__Ref"}),
+				            ConRes = Table.AddColumn(Relleno, "__Res", each fxResolverFecha([__Info], [__Ref], hoy, minimo)),
+				            ConFecha = Table.AddColumn(ConRes, "Fecha", each [__Res][Fecha], type nullable date),
+				            ConAlerta = Table.AddColumn(ConFecha, "Alerta fecha", each [__Res][Alerta], type nullable text),
+				            ConDirecta = Table.AddColumn(ConAlerta, "Fecha directa", each [__Info][Fecha] <> null, type logical)
+				        in
+				            Table.Buffer(Table.RemoveColumns(ConDirecta, {"__Info", "__Ref", "__Res"})),
+				    fxIdentificador =
+				        // Clasifica lo cargado en la columna IMEI: IMEI (15 dígitos, valida dígito verificador), N° de serie Samsung,
+				        // N° de orden (10 dígitos), código de pieza, modelo de producto (JBL no tiene IMEI) o valor no válido.
+				        (v as any, negocio as nullable text) as record =>
+				        let
+				            k = fxClave(v),
+				            NoDigitos = Text.Remove(Text.Combine({" ".."~"}), {"0".."9"}),
+				            Base = [Identificador = k, Tipo = "No válido", Clave = null, Producto = null, Color = null, Alerta = "Identificador no válido"],
+				            Luhn = (s as text) as logical =>
+				                let
+				                    Digitos = List.Reverse(List.Transform(Text.ToList(s), Number.From)),
+				                    Suma = List.Sum(List.Transform(List.Positions(Digitos), (i) =>
+				                        let n = Digitos{i} in if Number.Mod(i, 2) = 1 then (if n * 2 > 9 then n * 2 - 9 else n * 2) else n))
+				                in
+				                    Number.Mod(Suma, 10) = 0,
+				            Resultado =
+				                if k = null then [Identificador = null, Tipo = "Sin identificador", Clave = null, Producto = null, Color = null,
+				                    Alerta = "Sin identificador"]
+				                else
+				                    let
+				                        Tramos = List.Select(Text.SplitAny(k, NoDigitos), each _ <> ""),
+				                        Imei = List.First(List.Select(Tramos, each Text.Length(_) = 15), null),
+				                        Compacto = Text.Remove(k, {" "}),
+				                        Largo = Text.Length(Compacto),
+				                        NDig = Text.Length(Text.Select(Compacto, {"0".."9"})),
+				                        NLet = Text.Length(Text.Select(Compacto, {"A".."Z"})),
+				                        EsNum = NDig = Largo,
+				                        Resto = if Text.StartsWith(Compacto, "GH") then Text.Remove(Text.Range(Compacto, 2), {"'", "-"}) else "",
+				                        EsPieza = Text.Length(Resto) >= 7 and Text.Length(Resto) <= 8
+				                            and Text.Length(Text.Select(Text.Start(Resto, 7), {"0".."9"})) = 7,
+				                        Tokens = Text.Split(k, " "),
+				                        EsProducto = List.ContainsAny(Tokens, {"JBL", "TUNE", "WAVE", "FLIP", "CHARGE", "CINEMA", "PARTYBOX", "BOOMBOX", "ENDURANCE", "QUANTUM", "ONYX", "LUNA", "ENCORE", "PULSE", "LIVE", "CLIP", "XTREME", "GO", "HARMAN", "BAR", "VIBE", "REFLECT", "SOUNDGEAR"}) or (List.Count(Tokens) >= 2 and negocio = "JBL"),
+				                        Colores = [NEGRO = "NEGRO", NEGRA = "NEGRO", BLANCO = "BLANCO", BLANCA = "BLANCO", AZUL = "AZUL", ROJO = "ROJO", ROJA = "ROJO", GRIS = "GRIS", CELESTE = "CELESTE", VERDE = "VERDE", ROSA = "ROSA", VIOLETA = "VIOLETA", BEIGE = "BEIGE", CAMUFLADO = "CAMUFLADO", NARANJA = "NARANJA", PURPURA = "PURPURA", LILA = "LILA", TURQUESA = "TURQUESA", DORADO = "DORADO", PLATEADO = "PLATEADO", MENTA = "MENTA", AMARILLO = "AMARILLO"],
+				                        SinMarca = List.Select(Tokens, each _ <> "JBL"),
+				                        Ultimo = if List.IsEmpty(SinMarca) then null else List.Last(SinMarca),
+				                        Color = if Ultimo <> null then Record.FieldOrDefault(Colores, Ultimo, null) else null,
+				                        ModeloTokens = if Color <> null then List.RemoveLastN(SinMarca, 1) else SinMarca,
+				                        ModeloTexto = Text.Combine(ModeloTokens, " "),
+				                        Chars = Text.ToList(ModeloTexto),
+				                        Separado = Text.Combine(List.Transform(List.Positions(Chars), (i) =>
+				                            if i > 0 and Chars{i - 1} >= "0" and Chars{i - 1} <= "9" and Chars{i} >= "A" and Chars{i} <= "Z"
+				                            then " " & Chars{i} else Chars{i})),
+				                        Modelo = Text.Combine(List.Select(Text.Split(Separado, " "), each _ <> ""), " ")
+				                    in
+				                        if Imei <> null then
+				                            [Identificador = Imei, Tipo = "IMEI", Clave = Imei, Producto = null, Color = null,
+				                             Alerta = if not Luhn(Imei) then "IMEI con dígito verificador inválido"
+				                                 else if k <> Imei then "Identificador con texto extra" else null]
+				                        else if EsNum and List.Contains({14, 16, 17}, Largo) then
+				                            Base & [Tipo = "IMEI mal cargado", Alerta = "IMEI con " & Text.From(Largo) & " dígitos"]
+				                        else if EsNum and Largo = 10 then
+				                            [Identificador = Compacto, Tipo = "N° de orden", Clave = "ORD-" & Compacto, Producto = null, Color = null, Alerta = null]
+				                        else if EsNum then Base
+				                        else if Largo = 11 and NDig + NLet = Largo and NDig > 0 and NLet > 0 then
+				                            [Identificador = Compacto, Tipo = "N° de serie", Clave = "SN-" & Compacto, Producto = null, Color = null, Alerta = null]
+				                        else if EsPieza then Base & [Tipo = "Código de pieza", Alerta = "Código de pieza en lugar de IMEI"]
+				                        else if EsProducto then
+				                            [Identificador = k, Tipo = "Modelo de producto", Clave = null,
+				                             Producto = if Modelo = "" then "JBL" else "JBL " & Modelo, Color = Color, Alerta = null]
+				                        else Base
+				        in
+				            Resultado,
+				    fxEncabezado =
+				        // Busca en las primeras 8 filas la fila de encabezados que contiene todas las claves pedidas
+				        (datos as table, requeridas as list, prohibidas as list) as nullable record =>
+				        let
+				            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 8)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+				            Ok = List.Transform(Filas, (f) => List.ContainsAll(f, requeridas) and not List.ContainsAny(f, prohibidas)),
+				            Pos = List.PositionOf(Ok, true)
+				        in
+				            if Pos < 0 then null else [Fila = Pos, Claves = Filas{Pos}],
+				    fxTecnico =
+				        // Nombre canónico del técnico: el de su hoja ("Correa Bruno"), aunque lo hayan escrito "Bruno Correa"
+				        // Recibe la lista de hojas: si la leyera adentro, llamarla por fila reabriría el Excel en cada llamada.
+				        (t as any, nombres as list) as nullable text =>
+				        let
+				            Clave = (x) => let k = fxClave(x) in if k = null then null else Text.Combine(List.Sort(Text.Split(k, " ")), " "),
+				            k = Clave(t),
+				            Coinciden = List.Select(nombres, each Clave(_) = k)
+				        in
+				            if k = null then null else if List.IsEmpty(Coinciden) then Text.Proper(fxClave(t)) else Coinciden{0},
+				
+				    // Hoja "Desbloqueo y Reescritura": se ubica por encabezados (IMEI + Estado + Tecnico, sin Puesto)
+				    Hoy = Date.From(DateTime.LocalNow()),
+				    Minimo = #date(Date.Year(Hoy) - 1, 1, 1),
+				    Vacia = #table(type table [Fecha = nullable date, #"Alerta fecha" = nullable text, IMEI = nullable text,
+				        #"Tipo de identificador" = text, Tipo = text, Técnico = nullable text, #"Fila Excel" = Int64.Type], {}),
+				    Origen = Excel.Workbook((if Text.StartsWith(RutaExcel, "http") then Web.Contents(RutaExcel) else File.Contents(RutaExcel)), null, true),
+				    Hojas = Table.SelectRows(Origen, each [Kind] = "Sheet"),
+				    NombresDeHojas = List.Buffer(Hojas[Name]),
+				    ConEnc = Table.AddColumn(Hojas, "Enc", each try fxEncabezado([Data], {"IMEI", "ESTADO", "TECNICO"}, {"PUESTO"}) otherwise null),
+				    Candidatas = Table.SelectRows(ConEnc, each [Enc] <> null),
+				    Procesar = (datos as table, enc as record) as table =>
+				        let
+				            // en búfer: se usan en cada fila (sin búfer el motor las vuelve a calcular y tarda minutos)
+				            H = List.Buffer(enc[Claves]),
+				            Nombres = List.Buffer(Table.ColumnNames(datos)),
+				            Col = (k) => let p = List.PositionOf(H, k) in if p < 0 then null else Nombres{p},
+				            V = (r, k) => let c = Col(k) in if c = null then null else Record.Field(r, c),
+				            Cuerpo = Table.AddIndexColumn(Table.Skip(datos, enc[Fila] + 1), "__Fila", enc[Fila] + 2, 1, Int64.Type),
+				            Filas = Table.FromRecords(List.Transform(Table.ToRecords(Cuerpo), (r) =>
+				                [F = V(r, "FECHA"), I = V(r, "IMEI"), E = V(r, "ESTADO"), T = V(r, "TECNICO"), #"Fila Excel" = r[__Fila]]),
+				                {"F", "I", "E", "T", "Fila Excel"}),
+				            ConDatos = Table.SelectRows(Filas, each fxClave([I]) <> null or fxClave([E]) <> null),
+				            ConFecha = fxFechasTabla(ConDatos, "F", Hoy, Minimo),
+				            // nombre canónico una vez por técnico distinto, no por fila
+				            Tecnicos = Table.Buffer(Table.AddColumn(Table.Distinct(Table.SelectColumns(ConFecha, {"T"})), "Canon",
+				                each fxTecnico([T], NombresDeHojas))),
+				            ConCanon = Table.Join(ConFecha, "T", Table.RenameColumns(Tecnicos, {{"T", "__T"}}), "__T", JoinKind.LeftOuter),
+				            Limpio = Table.AddColumn(ConCanon, "L", each
+				                let
+				                    Id = fxIdentificador([I], null),
+				                    k = fxClave([E])
+				                in
+				                    [IMEI = Id[Identificador], #"Tipo de identificador" = Id[Tipo],
+				                     Tipo = if k = null then "Sin tipo" else if Text.StartsWith(k, "DESBLOQ") then "Desbloqueo"
+				                         else if Text.StartsWith(k, "REESCRIT") or Text.StartsWith(k, "RE ESCRIT") then "Reescritura"
+				                         else Text.Proper(k),
+				                     Técnico = [Canon] ?? "Sin técnico"]),
+				            Exp = Table.ExpandRecordColumn(Limpio, "L", {"IMEI", "Tipo de identificador", "Tipo", "Técnico"})
+				        in
+				            Table.SelectColumns(Exp, {"Fecha", "Alerta fecha", "IMEI", "Tipo de identificador", "Tipo", "Técnico", "Fila Excel"}),
+				    Resultado = if Table.IsEmpty(Candidatas) then Vacia
+				        else Table.Combine(List.Transform(Table.ToRecords(Candidatas), each Procesar([Data], [Enc]))),
+				    Tipos = Table.TransformColumnTypes(Resultado, {{"Fecha", type date}, {"Alerta fecha", type text}, {"IMEI", type text},
+				        {"Tipo de identificador", type text}, {"Tipo", type text}, {"Técnico", type text}, {"Fila Excel", Int64.Type}})
+				in
+				    Tipos
+
+	annotation PBI_ResultType = Table
+

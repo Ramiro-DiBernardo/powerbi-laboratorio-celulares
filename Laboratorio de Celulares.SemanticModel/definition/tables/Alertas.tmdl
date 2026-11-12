@@ -1,0 +1,65 @@
+table Alertas
+	lineageTag: 0b58eef7-03d1-5d2e-979d-00eb23425621
+
+	column ID
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 78f4b48f-0d3d-5db8-99e9-a321a0b822c1
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [ID]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Alerta
+		dataType: string
+		lineageTag: 4e2c43ad-af98-5259-9bc5-e647c7391a58
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Alerta]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Es principal'
+		dataType: boolean
+		isHidden
+		lineageTag: 87677ed3-5105-517a-8963-8342746a5480
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Es principal]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Grupo =
+			VAR _a = Alertas[Alerta]
+			RETURN
+			    SWITCH (
+			        TRUE (),
+			        CONTAINSSTRING ( _a, "fecha" ) || CONTAINSSTRING ( _a, "Mes no" ), "Fechas",
+			        CONTAINSSTRING ( _a, "IMEI" ) || CONTAINSSTRING ( _a, "dentificador" ) || CONTAINSSTRING ( _a, "pieza" ), "Identificación del equipo",
+			        _a = "Posible duplicado", "Duplicados",
+			        CONTAINSSTRING ( _a, "nivel" ) || _a = "OQC sin resultado" || _a = "Estado vacío", "Datos de proceso incompletos",
+			        "Puesto / estado / negocio / técnico"
+			    )
+		dataType: string
+		lineageTag: b62c0bb6-9c93-53de-b0c5-83940c719727
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Alertas = calculated
+		mode: import
+		source =
+				// Una fila por registro y alerta (el texto separado por "|" se abre en filas)
+				VAR _t = FILTER ( SELECTCOLUMNS ( Registros, "ID", Registros[ID], "Lista", Registros[Alertas] ), NOT ISBLANK ( [Lista] ) )
+				RETURN
+				    SELECTCOLUMNS (
+				        GENERATE ( _t, GENERATESERIES ( 1, PATHLENGTH ( [Lista] ), 1 ) ),
+				        "ID", [ID],
+				        "Alerta", PATHITEM ( [Lista], [Value] ),
+				        "Es principal", [Value] = 1
+				    )
+
+	annotation PBI_Id = 314be11ca00c479439e2
+

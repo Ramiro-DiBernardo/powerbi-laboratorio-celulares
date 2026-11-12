@@ -1,0 +1,80 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "a46f4794f4228cc549d8",
+  "displayName": "Flujo y desbloqueos",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "objects": {
+    "background": [
+      {
+        "properties": {
+          "color": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#EEF2F6'"
+                  }
+                }
+              }
+            }
+          },
+          "transparency": {
+            "expr": {
+              "Literal": {
+                "Value": "0D"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "outspace": [
+      {
+        "properties": {
+          "color": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#EEF2F6'"
+                  }
+                }
+              }
+            }
+          },
+          "transparency": {
+            "expr": {
+              "Literal": {
+                "Value": "0D"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "visualInteractions": [
+    {
+      "source": "a4ef3101df2b38df0403",
+      "target": "9063f23ab2df39bed73f",
+      "type": "NoFilter"
+    },
+    {
+      "source": "a732d3da0a3e53cc6b05",
+      "target": "9063f23ab2df39bed73f",
+      "type": "NoFilter"
+    },
+    {
+      "source": "a4ef3101df2b38df0403",
+      "target": "8c6d154e49ffea11bf87",
+      "type": "NoFilter"
+    },
+    {
+      "source": "a732d3da0a3e53cc6b05",
+      "target": "8c6d154e49ffea11bf87",
+      "type": "NoFilter"
+    }
+  ]
+}

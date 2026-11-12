@@ -1,0 +1,96 @@
+table Objetivos
+	lineageTag: 4ac94c6f-c189-5064-8f26-6ef8f2b3a03d
+
+	column Indicador
+		dataType: string
+		lineageTag: 3d52f9b5-9db9-57e4-a316-94344423cee9
+		summarizeBy: none
+		sourceColumn: Indicador
+		sortByColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Objetivo diario'
+		dataType: double
+		formatString: #,0
+		lineageTag: 385fcf3d-d4fd-5c53-b4c5-d62e5c9c4986
+		summarizeBy: none
+		sourceColumn: Objetivo diario
+
+		annotation SummarizationSetBy = Automatic
+
+	column Orden
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: bb75420b-cdb7-5213-a3b9-4a025fc4edf7
+		summarizeBy: none
+		sourceColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Fuente
+		dataType: string
+		lineageTag: ab6cf728-3998-5df8-9e15-4e171059a310
+		summarizeBy: none
+		sourceColumn: Fuente
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Objetivos = m
+		mode: import
+		source =
+				let
+				    // ---- funciones auxiliares (ver comentarios en cada una)
+				    fxClave =
+				        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+				        (v as any) as nullable text =>
+				        let
+				            Texto =
+				                if v = null then null
+				                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+				                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+				                else Text.From(v),
+				            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+				                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+				                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+				            Mayus = if Texto = null then null else Text.Upper(Texto),
+				            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+				            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+				            Espacios = if SinTildes = null then null
+				                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+				            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+				            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+				        in
+				            if Limpio = null or Limpio = "" then null else Limpio,
+				    fxBuscarCelda =
+				        // Posición (fila, columna, base 0) de la primera celda con ese texto dentro de las primeras 40 filas
+				        (datos as table, clave as text) as nullable record =>
+				        let
+				            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 40)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+				            Pos = List.PositionOf(List.Transform(Filas, (f) => List.Contains(f, clave)), true)
+				        in
+				            if Pos < 0 then null else [Fila = Pos, Col = List.PositionOf(Filas{Pos}, clave)],
+				
+				    // Objetivo diario por persona de cada indicador (tabla "Etapa / Objetivo x dia" de la hoja mensual).
+				    // Si la hoja no está o falta un valor, se usa el último conocido.
+				    Defectos = #table(type table [Indicador = text, Clave = text, #"Por defecto" = number, Orden = Int64.Type], {
+				        {"Reparador", "REPARADOR", 16, 1}, {"Sin reparar", "SIN REPARAR", 48, 2}, {"Diagnóstico", "DIAGNOSTICO", 21, 3},
+				        {"Prensado", "PRENSADO", 104, 4}, {"OQC", "OQC", 45, 5}}),
+				    Datos = HojaMensual,
+				    Celda = if Datos = null then null else fxBuscarCelda(Datos, "OBJETIVO X DIA"),
+				    Pares = if Celda = null or Celda[Col] = 0 then {}
+				        else
+				            let
+				                Filas = Table.ToRows(Table.Skip(Datos, Celda[Fila] + 1)),
+				                Hasta = List.FirstN(Filas, each _{Celda[Col] - 1} <> null)
+				            in
+				                List.Transform(Hasta, each {fxClave(_{Celda[Col] - 1}), _{Celda[Col]}}),
+				    Buscar = (k) => let m = List.Select(Pares, each _{0} = k and Value.Is(_{1}, type number)) in if List.IsEmpty(m) then null else m{0}{1},
+				    ConObjetivo = Table.AddColumn(Defectos, "Objetivo diario", each Buscar([Clave]) ?? [Por defecto], type number),
+				    ConFuente = Table.AddColumn(ConObjetivo, "Fuente", each if Buscar([Clave]) = null then "Valor por defecto" else "Hoja mensual", type text)
+				in
+				    Table.SelectColumns(ConFuente, {"Indicador", "Objetivo diario", "Orden", "Fuente"})
+
+	annotation PBI_ResultType = Table
+

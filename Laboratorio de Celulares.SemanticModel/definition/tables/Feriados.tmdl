@@ -1,0 +1,94 @@
+table Feriados
+	lineageTag: 161f048c-65e1-5ce5-8906-4b03fc36b797
+
+	column Fecha
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 36a2c28e-5a03-5cf4-ab9f-cef73cfe9225
+		summarizeBy: none
+		sourceColumn: Fecha
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Feriados = m
+		mode: import
+		source =
+				let
+				    // ---- funciones auxiliares (ver comentarios en cada una)
+				    fxClave =
+				        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+				        (v as any) as nullable text =>
+				        let
+				            Texto =
+				                if v = null then null
+				                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+				                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+				                else Text.From(v),
+				            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+				                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+				                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+				            Mayus = if Texto = null then null else Text.Upper(Texto),
+				            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+				            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+				            Espacios = if SinTildes = null then null
+				                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+				            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+				            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+				        in
+				            if Limpio = null or Limpio = "" then null else Limpio,
+				    fxFecha =
+				        // Interpreta una fecha cargada como fecha, número de serie de Excel o texto ("21/1", "22-1", "28/05/2026")
+				        (v as any) as record =>
+				        let
+				            Vacio = [Fecha = null, Dia = null, Mes = null, Texto = false, Parcial = false, Ilegible = false],
+				            Resultado =
+				                if v = null then Vacio
+				                else if Value.Is(v, type date) then Vacio & [Fecha = v]
+				                else if Value.Is(v, type datetime) then Vacio & [Fecha = Date.From(v)]
+				                else if Value.Is(v, type datetimezone) then Vacio & [Fecha = Date.From(DateTimeZone.RemoveZone(v))]
+				                else if Value.Is(v, type number) then
+				                    (if v >= 1 and v < 2958466 then Vacio & [Fecha = Date.From(v)] else Vacio & [Ilegible = true])
+				                else
+				                    let
+				                        t = Text.Trim(Text.Replace(Text.From(v), "#(00A0)", " ")),
+				                        Partes = List.Select(Text.SplitAny(t, "/-. "), each _ <> ""),
+				                        Numeros = List.Transform(Partes, each try Number.From(_, "en-US") otherwise null),
+				                        TodoNum = List.Count(Partes) >= 2 and List.Count(Partes) <= 3
+				                            and List.NonNullCount(Numeros) = List.Count(Partes)
+				                            and List.AllTrue(List.Transform(Partes, each Text.Length(_) <= 4)),
+				                        D = if TodoNum then Numeros{0} else null,
+				                        M = if TodoNum then Numeros{1} else null,
+				                        A0 = if TodoNum and List.Count(Numeros) = 3 then Numeros{2} else null,
+				                        A = if A0 = null then null else if A0 < 100 then 2000 + A0 else A0
+				                    in
+				                        if t = "" then Vacio
+				                        else if TodoNum and A <> null then
+				                            (try Vacio & [Fecha = #date(A, M, D), Texto = true] otherwise Vacio & [Ilegible = true, Texto = true])
+				                        else if TodoNum and D >= 1 and D <= 31 and M >= 1 and M <= 12 then
+				                            Vacio & [Dia = D, Mes = M, Parcial = true, Texto = true]
+				                        else
+				                            (try Vacio & [Fecha = Date.From(DateTime.FromText(t, [Culture = "es-AR"])), Texto = true]
+				                             otherwise Vacio & [Ilegible = true, Texto = true])
+				        in
+				            Resultado,
+				    fxBuscarCelda =
+				        // Posición (fila, columna, base 0) de la primera celda con ese texto dentro de las primeras 40 filas
+				        (datos as table, clave as text) as nullable record =>
+				        let
+				            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 40)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+				            Pos = List.PositionOf(List.Transform(Filas, (f) => List.Contains(f, clave)), true)
+				        in
+				            if Pos < 0 then null else [Fila = Pos, Col = List.PositionOf(Filas{Pos}, clave)],
+				
+				    // Columna "Feriados" de la hoja mensual (se usan para contar días hábiles)
+				    Datos = HojaMensual,
+				    Celda = if Datos = null then null else fxBuscarCelda(Datos, "FERIADOS"),
+				    Valores = if Celda = null then {} else List.Transform(Table.ToRows(Table.Skip(Datos, Celda[Fila] + 1)), each _{Celda[Col]}),
+				    Fechas = List.Distinct(List.RemoveNulls(List.Transform(Valores, each fxFecha(_)[Fecha])))
+				in
+				    Table.FromList(Fechas, Splitter.SplitByNothing(), type table [Fecha = date])
+
+	annotation PBI_ResultType = Table
+

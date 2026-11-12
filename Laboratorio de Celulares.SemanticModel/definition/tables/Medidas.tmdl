@@ -1,0 +1,580 @@
+table Medidas
+	lineageTag: 4627dc76-88f5-504b-b9e7-6229cf28a5bc
+
+	measure Registros = COUNTROWS ( Registros )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: 22fe5220-fa58-57cb-a4a2-934cf2fcf064
+
+	measure 'Equipos únicos' = DISTINCTCOUNTNOBLANK ( Registros[Clave equipo] )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: 4c03ca8e-1083-584a-8194-62462a7a532b
+
+	measure Reparados = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Reparado" ) )
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: 874fba29-bc20-55f0-b045-cedadee30cc1
+
+	measure 'Scrap reparador' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Scrap" ) )
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: 719d4aa8-97d4-5622-a934-ad1ee8a8ec50
+
+	measure 'Sin reparar' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Sin reparar" ) )
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: d365054a-cbd6-5e00-ad85-cf554d31771a
+
+	measure 'Pendientes reparador' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Pendiente" ) )
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: 131cfcc7-8d1b-5c75-b8be-cc585d8078e8
+
+	measure 'Reparador procesados' =
+			// Igual que la hoja mensual: Reparado + Scrap
+			[Reparados] + [Scrap reparador]
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: 984204bb-091b-5085-9d41-f5a518bed853
+
+	measure 'Reparador trabajados' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ) )
+		formatString: #,0
+		displayFolder: Volumen\Reparador
+		lineageTag: a1eb7cc4-7b57-5349-bcba-231ccf03fb07
+
+	measure Reparabilidad = DIVIDE ( [Reparados], [Reparador procesados] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Volumen\Reparador
+		lineageTag: 4a06b66f-a96e-5802-8118-1f11210e940e
+
+	measure '% Scrap reparador' = DIVIDE ( [Scrap reparador], [Reparador procesados] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Volumen\Reparador
+		lineageTag: bf18e6bb-2f5b-51a8-bdfb-b98800bcc31e
+
+	measure Diagnósticos = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Diagnóstico" ) )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: e2792f9e-b1fa-51dc-a7a0-3ed2399c1cbd
+
+	measure Prensados = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Prensado" ) )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: cb880c52-9cda-510d-b2d0-00949f760f2b
+
+	measure 'Asignaciones de partes' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Asignación de partes" ) )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: e41e0860-fc60-5cee-ae2e-f296a25c8ac8
+
+	measure 'Inspecciones OQC' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "OQC" ), KEEPFILTERS ( NOT ISBLANK ( Registros[Resultado OQC] ) ) )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: 08aba352-76f1-502c-a52e-9373ee3997a9
+
+	measure 'Controles con resultado' = CALCULATE ( [Registros], KEEPFILTERS ( NOT ISBLANK ( Registros[Resultado OQC] ) ) )
+		formatString: #,0
+		displayFolder: Calidad
+		lineageTag: fea13dfa-f3e7-5c1a-96ff-a00666a63047
+
+	measure 'Controles PASS' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Resultado OQC] = "PASS" ) )
+		formatString: #,0
+		displayFolder: Calidad
+		lineageTag: a36a003a-16cd-53df-bfd5-363e09cd8dc7
+
+	measure 'Controles FAIL' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Resultado OQC] = "FAIL" ) )
+		formatString: #,0
+		displayFolder: Calidad
+		lineageTag: bd456c85-7683-5768-ad84-676336b5c3cb
+
+	measure 'Validaciones scrap' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Resultado OQC] = "Validación scrap" ) )
+		formatString: #,0
+		displayFolder: Calidad
+		lineageTag: 48edd6a3-8fd2-5806-9376-41e424b2b416
+
+	measure '% FAIL control' = DIVIDE ( [Controles FAIL], [Controles PASS] + [Controles FAIL] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad
+		lineageTag: 78298cca-4c63-576b-8510-d87145cee6de
+
+	measure '% PASS control' = DIVIDE ( [Controles PASS], [Controles PASS] + [Controles FAIL] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad
+		lineageTag: 675faccb-9a82-5b36-9811-b729e648701f
+
+	measure 'Reparaciones con control' = CALCULATE ( [Reparados], KEEPFILTERS ( Registros[Resultado control posterior] IN { "PASS", "FAIL", "Validación scrap" } ) )
+		formatString: #,0
+		displayFolder: Calidad\Post reparación
+		lineageTag: ced6a043-56a0-56f4-926d-4f062544d22d
+
+	measure 'PASS post reparación' = CALCULATE ( [Reparados], KEEPFILTERS ( Registros[Resultado control posterior] = "PASS" ) )
+		formatString: #,0
+		displayFolder: Calidad\Post reparación
+		lineageTag: 9f41a45a-7c94-5000-bd8c-5d8e9cb3b652
+
+	measure 'FAIL post reparación' = CALCULATE ( [Reparados], KEEPFILTERS ( Registros[Resultado control posterior] = "FAIL" ) )
+		formatString: #,0
+		displayFolder: Calidad\Post reparación
+		lineageTag: 4cb6d492-b9d5-57e9-8650-562994ba086e
+
+	measure '% FAIL post reparación' = DIVIDE ( [FAIL post reparación], [PASS post reparación] + [FAIL post reparación] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad\Post reparación
+		lineageTag: e66c6958-6acf-50e1-b1b7-8d394529ab66
+
+	measure '% reparaciones con control' = DIVIDE ( [Reparaciones con control], [Reparados] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad\Post reparación
+		lineageTag: 46c72547-3c4d-5752-a7d3-08f21a65bbaf
+
+	measure Reingresos =
+			// Reparaciones de un equipo que ya había sido reparado antes
+			CALCULATE ( [Reparados], KEEPFILTERS ( Registros[N° de reparación] > 1 ) )
+		formatString: #,0
+		displayFolder: Calidad\Post reparación
+		lineageTag: 32c41c49-72f7-5dee-8954-d4b3bc9adbf8
+
+	measure '% reingresos' = DIVIDE ( [Reingresos], [Reparados] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad\Post reparación
+		lineageTag: ecf6e095-2307-5169-be58-387e711d53d2
+
+	measure 'Días diagnóstico → reparación' = CALCULATE ( MEDIAN ( Registros[Días desde diagnóstico] ), KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Reparado" ) )
+		formatString: #,0.0
+		displayFolder: Calidad\Tiempos
+		lineageTag: 794b53b9-315a-5024-82c9-49642a44ccb1
+
+	measure 'Días reparación → control' = CALCULATE ( MEDIAN ( Registros[Días hasta control] ), KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Reparado" ) )
+		formatString: #,0.0
+		displayFolder: Calidad\Tiempos
+		lineageTag: 0c215890-30c0-5501-8e27-059daf7bdf0d
+
+	measure '% reparados con nivel' = DIVIDE ( CALCULATE ( [Reparados], KEEPFILTERS ( Registros[Nivel de reparación] <> "Sin nivel" ) ), [Reparados] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad
+		lineageTag: eb763acc-939b-5d0d-87e3-c080ca99cf9d
+
+	measure 'Fecha última carga' = CALCULATE ( MAX ( Registros[Fecha] ), REMOVEFILTERS () )
+		formatString: dd/mm/yyyy
+		displayFolder: Objetivos
+		lineageTag: 4f1d14e3-9faa-5b4b-8716-86306f036fcb
+
+	measure 'Días hábiles' =
+			VAR _fin = [Fecha última carga]
+			RETURN
+			    CALCULATE ( COUNTROWS ( Calendario ), KEEPFILTERS ( Calendario[Día hábil] = TRUE () ), KEEPFILTERS ( Calendario[Fecha] <= _fin ) )
+		formatString: #,0
+		displayFolder: Objetivos
+		lineageTag: cb62e2ff-3e79-5a30-a700-090fda1ff220
+
+	measure 'Días hábiles técnico' =
+			// Días hábiles del período desde que el técnico empezó a cargar en la planilla
+			VAR _ini = CALCULATE ( MIN ( Registros[Fecha] ), REMOVEFILTERS ( Registros ), REMOVEFILTERS ( Calendario ), REMOVEFILTERS ( Periodos ) )
+			VAR _fin = [Fecha última carga]
+			RETURN
+			    CALCULATE ( COUNTROWS ( Calendario ), KEEPFILTERS ( Calendario[Día hábil] = TRUE () ),
+			        KEEPFILTERS ( Calendario[Fecha] >= _ini && Calendario[Fecha] <= _fin ) )
+		formatString: #,0
+		displayFolder: Objetivos
+		lineageTag: 3376ee54-9423-5535-ab47-897ab840243e
+
+	measure 'Actividad con objetivo' = [Reparador procesados] + [Sin reparar] + [Diagnósticos] + [Prensados] + [Inspecciones OQC]
+		formatString: #,0
+		displayFolder: Objetivos
+		lineageTag: 8b7d466a-a4ca-5820-a134-f38eaab127b1
+
+	measure 'Objetivo reparador' =
+			VAR _o = LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "Reparador" )
+			RETURN
+			    SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Reparador procesados] > 0, [Días hábiles técnico] * _o ) )
+		formatString: #,0
+		displayFolder: Objetivos\Detalle
+		lineageTag: 4d383305-0a13-5a98-beca-866d81362ddc
+
+	measure 'Cumpl. reparador' = DIVIDE ( [Reparador procesados], [Objetivo reparador] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: 58633e86-dd09-5891-8499-8f013f686ee3
+
+	measure 'Objetivo sin reparar' =
+			VAR _o = LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "Sin reparar" )
+			RETURN
+			    SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Sin reparar] > 0, [Días hábiles técnico] * _o ) )
+		formatString: #,0
+		displayFolder: Objetivos\Detalle
+		lineageTag: bdc118a3-fa83-5daf-8c9b-ec86ac58d6ef
+
+	measure 'Cumpl. sin reparar' = DIVIDE ( [Sin reparar], [Objetivo sin reparar] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: f14e428b-ad5c-5216-85e4-1fbf30d7a8e8
+
+	measure 'Objetivo diagnóstico' =
+			VAR _o = LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "Diagnóstico" )
+			RETURN
+			    SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Diagnósticos] > 0, [Días hábiles técnico] * _o ) )
+		formatString: #,0
+		displayFolder: Objetivos\Detalle
+		lineageTag: a7c23eb3-e78f-54e9-8328-3c8cf92a1e2b
+
+	measure 'Cumpl. diagnóstico' = DIVIDE ( [Diagnósticos], [Objetivo diagnóstico] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: 9d14af06-c680-510d-9483-10fad1041b5b
+
+	measure 'Objetivo prensado' =
+			VAR _o = LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "Prensado" )
+			RETURN
+			    SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Prensados] > 0, [Días hábiles técnico] * _o ) )
+		formatString: #,0
+		displayFolder: Objetivos\Detalle
+		lineageTag: d2e38d7a-cdd4-520a-a17c-1936bf079a8f
+
+	measure 'Cumpl. prensado' = DIVIDE ( [Prensados], [Objetivo prensado] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: 58ffad26-99f6-52d0-82a6-7ea296e1bc87
+
+	measure 'Objetivo OQC' =
+			VAR _o = LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "OQC" )
+			RETURN
+			    SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Inspecciones OQC] > 0, [Días hábiles técnico] * _o ) )
+		formatString: #,0
+		displayFolder: Objetivos\Detalle
+		lineageTag: b759d5c4-d78a-5061-9cc7-6f2bbba168f3
+
+	measure 'Cumpl. OQC' = DIVIDE ( [Inspecciones OQC], [Objetivo OQC] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: a7d2e3b3-f660-5a80-913c-e2f78a5c0dc6
+
+	measure 'Cumplimiento total' =
+			// Como la hoja mensual: suma de los cumplimientos de cada tarea del técnico (promedio entre técnicos)
+			AVERAGEX (
+			    FILTER ( VALUES ( 'Técnicos'[Técnico] ), [Actividad con objetivo] > 0 ),
+			    [Cumpl. reparador] + [Cumpl. sin reparar] + [Cumpl. diagnóstico] + [Cumpl. prensado] + [Cumpl. OQC]
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Objetivos
+		lineageTag: b10856c5-d9be-5d8d-aedb-2fcea038b91e
+
+	measure 'Promedio diario reparador' = DIVIDE ( [Reparador procesados], SUMX ( VALUES ( 'Técnicos'[Técnico] ), IF ( [Reparador procesados] > 0, [Días hábiles técnico] ) ) )
+		formatString: #,0.0
+		displayFolder: Objetivos
+		lineageTag: 61ca5c4f-1905-51e0-8d4d-f4a76b2c8cab
+
+	measure 'Técnicos activos' = CALCULATE ( DISTINCTCOUNT ( Registros[Técnico] ) )
+		formatString: #,0
+		displayFolder: Volumen
+		lineageTag: ffe0bbc9-9d87-558e-8a96-50e778610f3d
+
+	measure 'Menciones de falla' = COUNTROWS ( Fallas )
+		formatString: #,0
+		displayFolder: Fallas
+		lineageTag: 6ced3baf-ed28-565e-86de-9bca9603d740
+
+	measure '% sobre registros con falla' = DIVIDE ( [Registros], CALCULATE ( [Registros], REMOVEFILTERS ( 'Categorías falla' ), REMOVEFILTERS ( Fallas ), KEEPFILTERS ( NOT ISBLANK ( Registros[Categorías falla] ) ) ) )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Fallas
+		lineageTag: a50a5818-3913-56fe-854c-55f9c58b9530
+
+	measure 'Registros con alerta' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Tiene alerta] = "Sí" ) )
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: 41acb0e4-f68a-5868-9403-448838a10fbb
+
+	measure '% registros con alerta' = DIVIDE ( [Registros con alerta], [Registros] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Calidad de datos
+		lineageTag: 172ea37d-4a49-52bd-9320-52a6d3608987
+
+	measure Alertas = COUNTROWS ( Alertas )
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: c93b8316-5bd0-5c2b-9c54-278be4f78644
+
+	measure 'Fechas corregidas o imputadas' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Calidad fecha] IN { "Corregida", "Imputada", "Sin fecha" } ) )
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: 1323c3a3-4064-5f27-be29-079395c38de6
+
+	measure 'Identificadores con problemas' =
+			CALCULATE (
+			    [Registros],
+			    KEEPFILTERS (
+			        FILTER (
+			            ALL ( Registros[Tipo de identificador], Registros[Alertas] ),
+			            Registros[Tipo de identificador] IN { "No válido", "IMEI mal cargado", "Código de pieza", "Sin identificador" }
+			                || CONTAINSSTRING ( Registros[Alertas], "verificador" )
+			        )
+			    )
+			)
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: 7fea9b9f-23c9-5e17-871d-b9d1ee9a2400
+
+	measure 'Posibles duplicados' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Posible duplicado] = "Sí" ) )
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: 6c6ab699-d413-5139-b1e8-b3c00ce1db93
+
+	measure 'Reparados sin nivel' = CALCULATE ( [Registros], KEEPFILTERS ( Registros[Puesto] = "Reparador" ), KEEPFILTERS ( Registros[Estado] = "Reparado" ), KEEPFILTERS ( Registros[Nivel de reparación] = "Sin nivel" ) )
+		formatString: #,0
+		displayFolder: Calidad de datos
+		lineageTag: 70a2d63f-b4ce-5029-bea4-74f61a9fd16b
+
+	measure 'Ingresos labo' = SUM ( 'Flujo laboratorio'[Ingresos] )
+		formatString: #,0
+		displayFolder: Flujo laboratorio
+		lineageTag: f1143ca8-4a18-578d-b0a0-e84df0055679
+
+	measure 'Egresos labo' = SUM ( 'Flujo laboratorio'[Egresos] )
+		formatString: #,0
+		displayFolder: Flujo laboratorio
+		lineageTag: 83d8b7c3-0722-5360-959b-9f82d53ce51e
+
+	measure 'Reparados (flujo)' = SUM ( 'Flujo laboratorio'[Reparados] )
+		formatString: #,0
+		displayFolder: Flujo laboratorio
+		lineageTag: 99775f34-c20c-5e63-a276-4c7ca64e83a9
+
+	measure 'Scrap (flujo)' = SUM ( 'Flujo laboratorio'[Scrap] )
+		formatString: #,0
+		displayFolder: Flujo laboratorio
+		lineageTag: 13538207-4b33-5ef7-9e80-8b0889d85f1f
+
+	measure 'Saldo ingresos - egresos' = [Ingresos labo] - [Egresos labo]
+		formatString: +#,0;-#,0;0
+		displayFolder: Flujo laboratorio
+		lineageTag: 1571b9de-a4a0-57aa-b600-a620606e4662
+
+	measure 'Saldo acumulado' =
+			VAR _max = MAX ( Calendario[Fecha] )
+			RETURN
+			    IF ( _max <= CALCULATE ( MAX ( 'Flujo laboratorio'[Fecha] ), REMOVEFILTERS () )
+			        && _max >= CALCULATE ( MIN ( 'Flujo laboratorio'[Fecha] ), REMOVEFILTERS () ),
+			        CALCULATE ( [Ingresos labo] - [Egresos labo], REMOVEFILTERS ( Periodos ), REMOVEFILTERS ( Calendario ), Calendario[Fecha] <= _max ) )
+		formatString: +#,0;-#,0;0
+		displayFolder: Flujo laboratorio
+		lineageTag: 7817a9cf-fb74-5298-827d-fcf4c159ce38
+
+	measure '% scrap (flujo)' = DIVIDE ( [Scrap (flujo)], [Egresos labo] )
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Flujo laboratorio
+		lineageTag: 109e9940-3c52-54be-a8ef-f8258981452a
+
+	measure 'Desbloqueos y reescrituras' = COUNTROWS ( Desbloqueos )
+		formatString: #,0
+		displayFolder: Desbloqueos
+		lineageTag: 1315273e-737b-50f9-8f19-b9690f37c337
+
+	measure Desbloqueos = CALCULATE ( COUNTROWS ( Desbloqueos ), KEEPFILTERS ( Desbloqueos[Tipo] = "Desbloqueo" ) )
+		formatString: #,0
+		displayFolder: Desbloqueos
+		lineageTag: fa538855-2112-5dfa-92b0-01165df3428b
+
+	measure Reescrituras = CALCULATE ( COUNTROWS ( Desbloqueos ), KEEPFILTERS ( Desbloqueos[Tipo] = "Reescritura" ) )
+		formatString: #,0
+		displayFolder: Desbloqueos
+		lineageTag: 68ae05c0-aee0-510a-93ce-f8419df06496
+
+	measure 'Txt actualizado' = "Datos hasta el " & FORMAT ( [Fecha última carga], "dd/mm/yyyy" ) & "  ·  " & FORMAT ( CALCULATE ( [Registros], REMOVEFILTERS () ), "#,0" ) & " registros"
+		displayFolder: Textos
+		lineageTag: d67acf12-c708-5582-8b1e-b0f253521923
+
+	measure 'Txt equipos' = FORMAT ( [Equipos únicos], "#,0" ) & " equipos distintos"
+		displayFolder: Textos
+		lineageTag: 4d07dcf6-c26c-5c33-9675-b37885475615
+
+	measure 'Txt reparabilidad' = "reparabilidad " & FORMAT ( [Reparabilidad], "0.0%" ) & " (rep. / rep.+scrap)"
+		displayFolder: Textos
+		lineageTag: fea3cb97-4a55-54f3-a81e-6c3675e8bc80
+
+	measure 'Txt scrap' = FORMAT ( [% Scrap reparador], "0.0%" ) & " de lo procesado"
+		displayFolder: Textos
+		lineageTag: aed05a3e-1ccc-56a0-901d-206674845343
+
+	measure 'Txt sin reparar' = FORMAT ( DIVIDE ( [Sin reparar], [Reparador trabajados] ), "0.0%" ) & " de lo trabajado"
+		displayFolder: Textos
+		lineageTag: 12f24dfa-e965-59d4-939a-4fc2f2cdb092
+
+	measure 'Txt control' = FORMAT ( [Controles FAIL] + 0, "#,0" ) & " FAIL en " & FORMAT ( [Controles PASS] + [Controles FAIL] + 0, "#,0" ) & " controles"
+		displayFolder: Textos
+		lineageTag: a5c2304b-2add-50d7-b833-099afd68ec1d
+
+	measure 'Txt cumplimiento' = FORMAT ( [Días hábiles] + 0, "#,0" ) & " días hábiles  ·  meta 100%"
+		displayFolder: Textos
+		lineageTag: 0337af8e-21d8-5769-a8dc-4df0f670d733
+
+	measure 'Txt fail post' = FORMAT ( [FAIL post reparación] + 0, "#,0" ) & " reparaciones con FAIL"
+		displayFolder: Textos
+		lineageTag: 49a7d97a-89f8-5856-b3ae-9f997c06a5e1
+
+	measure 'Txt reingresos' = FORMAT ( [Reingresos] + 0, "#,0" ) & " equipos reparados otra vez"
+		displayFolder: Textos
+		lineageTag: bdacc5d9-b0df-511b-8c4d-c9572c1b95fc
+
+	measure 'Txt días diag' = "mediana, en días corridos"
+		displayFolder: Textos
+		lineageTag: 88325018-8c2f-5672-896e-2e4ec181ffaf
+
+	measure 'Txt con control' = FORMAT ( [% reparaciones con control], "0%" ) & " de las reparaciones llegó a control"
+		displayFolder: Textos
+		lineageTag: 1ea7ffc3-677f-521b-b69e-84b80628d630
+
+	measure 'Txt nivel' = FORMAT ( [Reparados sin nivel] + 0, "#,0" ) & " reparados sin nivel cargado"
+		displayFolder: Textos
+		lineageTag: 67c9599a-ccf4-5d6e-bd94-f9e0daf92c1f
+
+	measure 'Txt validaciones' = FORMAT ( DIVIDE ( [Validaciones scrap], [Controles con resultado] ), "0.0%" ) & " de los controles"
+		displayFolder: Textos
+		lineageTag: 68175b24-cc03-5eb5-9559-f1aef311ee54
+
+	measure 'Txt alertas' = FORMAT ( [Registros con alerta] + 0, "#,0" ) & " registros con al menos una alerta"
+		displayFolder: Textos
+		lineageTag: f057346d-9d99-5a3e-bb3d-cfe745b2d15b
+
+	measure 'Txt fechas' = "año corregido, sin año, vacías o ilegibles"
+		displayFolder: Textos
+		lineageTag: 5a8d43d8-a9d7-562f-b534-4d6639e43632
+
+	measure 'Txt ids' = "sin IMEI, IMEI incompleto o dígito verificador malo"
+		displayFolder: Textos
+		lineageTag: 06ea8578-8fab-562e-8643-c9c5821f29c3
+
+	measure 'Txt duplicados' = "mismo equipo, técnico, día, puesto y estado"
+		displayFolder: Textos
+		lineageTag: 3272f8d0-3707-5f48-8827-22d17f203819
+
+	measure 'Txt saldo' = "ingresos - egresos del período"
+		displayFolder: Textos
+		lineageTag: 83d8a15f-76a1-5f25-9092-abf79a848495
+
+	measure 'Txt flujo scrap' = FORMAT ( [% scrap (flujo)], "0.0%" ) & " de los egresos"
+		displayFolder: Textos
+		lineageTag: 24068f55-bc76-5b3c-b1be-457e0a602d7f
+
+	measure 'Txt desbloqueos' = FORMAT ( [Reescrituras] + 0, "#,0" ) & " reescrituras"
+		displayFolder: Textos
+		lineageTag: 8b220f05-6f2f-51b4-ae5f-130aebff62db
+
+	measure 'Txt prom diario' = "por técnico y día hábil (obj. " & FORMAT ( LOOKUPVALUE ( Objetivos[Objetivo diario], Objetivos[Indicador], "Reparador" ), "0" ) & ")"
+		displayFolder: Textos
+		lineageTag: 2ec8dfca-1294-57fd-a955-3625f25a01ce
+
+	measure 'Txt registros' = FORMAT ( [Técnicos activos] + 0, "#,0" ) & " técnicos con carga"
+		displayFolder: Textos
+		lineageTag: 52fc9d1e-dea2-5d79-8927-2035d7004546
+
+	measure 'Color cumplimiento' =
+			VAR _p = [Cumplimiento total]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#B8C2CC", _p >= 1, "#1F9D63", _p >= 0.85, "#E8A317", "#D4533B" )
+		displayFolder: Formato
+		lineageTag: d97bdc13-29f0-54af-b38e-e748715e4b51
+
+	measure 'Color reparabilidad' =
+			VAR _p = [Reparabilidad]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#B8C2CC", _p >= 0.6, "#1F9D63", _p >= 0.4, "#E8A317", "#D4533B" )
+		displayFolder: Formato
+		lineageTag: a3f3736b-3c4a-58d5-abeb-d01b8124decc
+
+	measure 'Color fail post' =
+			VAR _p = [% FAIL post reparación]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#B8C2CC", _p <= 0.01, "#1F9D63", _p <= 0.03, "#E8A317", "#D4533B" )
+		displayFolder: Formato
+		lineageTag: 58778cd1-7c53-5377-b64a-a2ac313cbb78
+
+	measure 'Color categoría' = SELECTEDVALUE ( 'Categorías falla'[Color], "#5B6B7A" )
+		displayFolder: Formato
+		lineageTag: 1f5752ef-340d-5278-81fe-f47becd9bf19
+
+	measure 'Color calor puesto' =
+			VAR _v = [Registros]
+			VAR _m = MAXX ( CROSSJOIN ( ALLSELECTED ( 'Técnicos'[Técnico] ), ALLSELECTED ( Registros[Puesto] ) ), [Registros] )
+			VAR _r = DIVIDE ( _v, _m )
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _v ), "#FFFFFF", _r >= 0.8, "#1D4ED8", _r >= 0.6, "#3B82F6", _r >= 0.4, "#7FB0FF", _r >= 0.2, "#BCD4FF", "#E6EEFF" )
+		displayFolder: Formato
+		lineageTag: 3bdd5b01-4b79-578e-9803-9b696cffa278
+
+	measure 'Color texto calor puesto' =
+			VAR _m = MAXX ( CROSSJOIN ( ALLSELECTED ( 'Técnicos'[Técnico] ), ALLSELECTED ( Registros[Puesto] ) ), [Registros] )
+			RETURN
+			    IF ( DIVIDE ( [Registros], _m ) >= 0.6, "#FFFFFF", "#0F2A44" )
+		displayFolder: Formato
+		lineageTag: db7eae3c-27e7-5027-9d8a-8f71f50def42
+
+	measure 'Color calor alertas' =
+			VAR _v = [Alertas]
+			VAR _m = MAXX ( CROSSJOIN ( ALLSELECTED ( 'Técnicos'[Técnico] ), ALLSELECTED ( Alertas[Grupo] ) ), [Alertas] )
+			VAR _r = DIVIDE ( _v, _m )
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _v ), "#FFFFFF", _r >= 0.6, "#F7C9C0", _r >= 0.3, "#FFE7A8", "#FFF6DD" )
+		displayFolder: Formato
+		lineageTag: 0463342c-1625-5066-9a74-7264089e1546
+
+	measure 'Fondo Cumpl. reparador' =
+			VAR _p = [Cumpl. reparador]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: 75ee4c12-d664-53e2-8b3b-1e05e0c95a62
+
+	measure 'Fondo Cumpl. sin reparar' =
+			VAR _p = [Cumpl. sin reparar]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: ec1d0adf-eac4-5de3-99b3-f4d5be3a2a40
+
+	measure 'Fondo Cumpl. diagnóstico' =
+			VAR _p = [Cumpl. diagnóstico]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: a9d1206a-5fdb-5663-aa2c-db6e0b581b81
+
+	measure 'Fondo Cumpl. prensado' =
+			VAR _p = [Cumpl. prensado]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: 1b31a4e8-2791-5753-8fa6-d1a8b02d8558
+
+	measure 'Fondo Cumpl. OQC' =
+			VAR _p = [Cumpl. OQC]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: d5bb55e0-31f9-5825-808c-17fcc7538112
+
+	measure 'Fondo Cumplimiento total' =
+			VAR _p = [Cumplimiento total]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#FFFFFF", _p >= 1, "#BFEBD3", _p >= 0.85, "#FFE7A8", "#F7C9C0" )
+		displayFolder: Formato
+		lineageTag: 2b06ea84-385d-518a-a740-d756a86cfa79
+
+	column Medidas
+		dataType: string
+		isHidden
+		lineageTag: bc6a13ed-d5bd-56c1-b0f8-3a4d8c6e283e
+		summarizeBy: none
+		sourceColumn: Medidas
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Medidas = m
+		mode: import
+		source =
+				let
+				    Tabla = #table(type table [Medidas = text], {})
+				in
+				    Tabla
+
+	annotation PBI_ResultType = Table
+

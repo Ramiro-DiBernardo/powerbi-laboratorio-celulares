@@ -1,0 +1,79 @@
+table Técnicos
+	lineageTag: 1690dfed-4e3e-52c9-a799-bf138756bca4
+
+	column Técnico
+		dataType: string
+		lineageTag: 9e3dedac-16cd-571f-a5a6-ee246abf8052
+		summarizeBy: none
+		sourceColumn: Técnico
+
+		annotation SummarizationSetBy = Automatic
+
+	column Legajo
+		dataType: string
+		lineageTag: 2982da5a-75ee-5539-b09f-5ec269b761d6
+		summarizeBy: none
+		sourceColumn: Legajo
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Puesto principal' =
+			// Puesto en el que más registros cargó el técnico
+			VAR _p = ADDCOLUMNS ( VALUES ( Registros[Puesto] ), "c", CALCULATE ( COUNTROWS ( Registros ) ) )
+			RETURN COALESCE ( MAXX ( TOPN ( 1, FILTER ( _p, [c] > 0 ), [c], DESC ), Registros[Puesto] ), "Desbloqueos" )
+		dataType: string
+		lineageTag: 0eb22daf-f62a-5f8e-891f-a87c97ffa1a2
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Técnicos = m
+		mode: import
+		source =
+				let
+				    // ---- funciones auxiliares (ver comentarios en cada una)
+				    fxClave =
+				        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+				        (v as any) as nullable text =>
+				        let
+				            Texto =
+				                if v = null then null
+				                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+				                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+				                else Text.From(v),
+				            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+				                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+				                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+				            Mayus = if Texto = null then null else Text.Upper(Texto),
+				            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+				            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+				            Espacios = if SinTildes = null then null
+				                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+				            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+				            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+				        in
+				            if Limpio = null or Limpio = "" then null else Limpio,
+				    fxEncabezado =
+				        // Busca en las primeras 8 filas la fila de encabezados que contiene todas las claves pedidas
+				        (datos as table, requeridas as list, prohibidas as list) as nullable record =>
+				        let
+				            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 8)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+				            Ok = List.Transform(Filas, (f) => List.ContainsAll(f, requeridas) and not List.ContainsAny(f, prohibidas)),
+				            Pos = List.PositionOf(Ok, true)
+				        in
+				            if Pos < 0 then null else [Fila = Pos, Claves = Filas{Pos}],
+				
+				    // Un técnico por hoja de técnico (mismo criterio que Registros) más los que solo aparecen en desbloqueos
+				    Origen = Excel.Workbook((if Text.StartsWith(RutaExcel, "http") then Web.Contents(RutaExcel) else File.Contents(RutaExcel)), null, true),
+				    Hojas = Table.SelectRows(Origen, each [Kind] = "Sheet"),
+				    ConEnc = Table.AddColumn(Hojas, "Enc", each try fxEncabezado([Data], {"FECHA PROCESADO", "PUESTO"}, {}) otherwise null),
+				    DeHojas = Table.SelectRows(ConEnc, each [Enc] <> null)[Name],
+				    Todos = List.Distinct(DeHojas & List.RemoveNulls(Desbloqueos[Técnico])),
+				    Tabla = Table.FromList(Todos, Splitter.SplitByNothing(), type table [Técnico = text]),
+				    ConLegajo = Table.NestedJoin(Tabla, {"Técnico"}, Legajos, {"Técnico"}, "L", JoinKind.LeftOuter),
+				    Expandida = Table.ExpandTableColumn(ConLegajo, "L", {"Legajo"})
+				in
+				    Table.TransformColumnTypes(Expandida, {{"Legajo", type text}})
+
+	annotation PBI_ResultType = Table
+

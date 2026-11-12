@@ -1,0 +1,31 @@
+model Model
+	culture: es-ES
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-AR
+	dataAccessOptions
+		fastCombine
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["RutaExcel","NombresHojas","HojaMensual","Registros","Desbloqueos","Flujo laboratorio","Objetivos","Feriados","Legajos","Técnicos","Categorías falla","Calendario","Periodos","Medidas"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Registros
+ref table Desbloqueos
+ref table 'Flujo laboratorio'
+ref table Objetivos
+ref table Feriados
+ref table Legajos
+ref table Técnicos
+ref table 'Categorías falla'
+ref table Fallas
+ref table Alertas
+ref table Calendario
+ref table Periodos
+ref table Medidas
+
+ref cultureInfo es-ES
+

@@ -1,0 +1,67 @@
+expression RutaExcel = "D:\Power BI\powerbi-laboratorio-celulares\demo\laboratorio_demo.xlsx" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: a93e6450-0e05-513a-a42f-451a44c36466
+
+	annotation PBI_ResultType = Text
+
+expression NombresHojas =
+		let
+		    Origen = Excel.Workbook((if Text.StartsWith(RutaExcel, "http") then Web.Contents(RutaExcel) else File.Contents(RutaExcel)), null, true)
+		in
+		    Table.SelectRows(Origen, each [Kind] = "Sheet")[Name]
+	lineageTag: 8d6bec86-93f4-57fa-b680-15c88577ee11
+
+	annotation PBI_ResultType = List
+
+expression HojaMensual =
+		let
+		    // ---- funciones auxiliares (ver comentarios en cada una)
+		    fxClave =
+		        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+		        (v as any) as nullable text =>
+		        let
+		            Texto =
+		                if v = null then null
+		                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+		                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+		                else Text.From(v),
+		            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+		                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+		                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+		            Mayus = if Texto = null then null else Text.Upper(Texto),
+		            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+		            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+		            Espacios = if SinTildes = null then null
+		                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+		            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+		            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+		        in
+		            if Limpio = null or Limpio = "" then null else Limpio,
+		    fxBuscarCelda =
+		        // Posición (fila, columna, base 0) de la primera celda con ese texto dentro de las primeras 40 filas
+		        (datos as table, clave as text) as nullable record =>
+		        let
+		            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 40)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+		            Pos = List.PositionOf(List.Transform(Filas, (f) => List.Contains(f, clave)), true)
+		        in
+		            if Pos < 0 then null else [Fila = Pos, Col = List.PositionOf(Filas{Pos}, clave)],
+		
+		    Resultado =
+		// Hoja resumen mensual (la que tiene "Objetivo x dia"): de ahí salen objetivos, feriados y legajos
+		        let
+		            Origen = Excel.Workbook((if Text.StartsWith(RutaExcel, "http") then Web.Contents(RutaExcel) else File.Contents(RutaExcel)), null, true),
+		            Hojas = Table.SelectRows(Origen, each [Kind] = "Sheet"),
+		            // primero las hojas llamadas "Mensual..."; si no hay, se revisan todas (más lento)
+		            PorNombre = Table.SelectRows(Hojas, each Text.Contains(fxClave([Name]) ?? "", "MENSUAL")),
+		            ConCelda = Table.AddColumn(if Table.IsEmpty(PorNombre) then Hojas else PorNombre, "Celda",
+		                each try fxBuscarCelda([Data], "OBJETIVO X DIA") otherwise null),
+		            Candidatas = Table.SelectRows(ConCelda, each [Celda] <> null),
+		            Preferencia = Table.AddColumn(Candidatas, "Pref", each if Text.Contains(fxClave([Name]) ?? "", "MENSUAL") then 1 else 0),
+		            Orden = Table.Sort(Preferencia, {{"Pref", Order.Descending}, {"Name", Order.Descending}})
+		        in
+		            if Table.IsEmpty(Orden) then null else Orden{0}[Data]
+		in
+		    Resultado
+	lineageTag: 1bfca7de-cb0c-5748-8d94-01c48410d0ef
+
+	annotation PBI_ResultType = Table
+

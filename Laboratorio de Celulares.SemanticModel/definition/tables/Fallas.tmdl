@@ -1,0 +1,47 @@
+table Fallas
+	lineageTag: dc1c3c1a-b6cd-50e9-a905-a1651c32ef5f
+
+	column ID
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 904ffe4c-2d26-5111-9208-26830228c458
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [ID]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Categoría
+		dataType: string
+		lineageTag: ddaff65b-5c0a-52df-ad32-9dd054a51fa6
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Categoría]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Es principal'
+		dataType: boolean
+		lineageTag: 4be512fa-2617-5a7c-8a66-660a522a1770
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Es principal]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Fallas = calculated
+		mode: import
+		source =
+				// Una fila por registro y categoría (el texto separado por "|" se abre en filas)
+				VAR _t = FILTER ( SELECTCOLUMNS ( Registros, "ID", Registros[ID], "Lista", Registros[Categorías falla] ), NOT ISBLANK ( [Lista] ) )
+				RETURN
+				    SELECTCOLUMNS (
+				        GENERATE ( _t, GENERATESERIES ( 1, PATHLENGTH ( [Lista] ), 1 ) ),
+				        "ID", [ID],
+				        "Categoría", PATHITEM ( [Lista], [Value] ),
+				        "Es principal", [Value] = 1
+				    )
+
+	annotation PBI_Id = 8aae4e956fbf01bec0e9
+

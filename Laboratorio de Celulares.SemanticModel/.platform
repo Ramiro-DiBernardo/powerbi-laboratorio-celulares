@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Laboratorio de Celulares"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "26fbf240-a844-5088-93a0-2befa0ad0016"
+  }
+}

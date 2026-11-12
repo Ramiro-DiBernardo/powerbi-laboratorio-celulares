@@ -1,0 +1,58 @@
+table Periodos
+	lineageTag: e23ee959-8487-5978-b06f-a22e09509e37
+
+	column Período
+		dataType: string
+		lineageTag: 1287d450-d0b3-53c4-9869-1b9e676853f4
+		summarizeBy: none
+		sourceColumn: Período
+		sortByColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Orden
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: a9b63e74-448f-58f9-83fc-725c86f759f5
+		summarizeBy: none
+		sourceColumn: Orden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Fecha
+		dataType: dateTime
+		isHidden
+		formatString: dd/mm/yyyy
+		lineageTag: 0586acb1-3a19-5f01-92c2-ebe8f1d500a3
+		summarizeBy: none
+		sourceColumn: Fecha
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Periodos = m
+		mode: import
+		source =
+				let
+				    // Períodos rápidos relativos a la fecha de actualización (una fila por período y fecha)
+				    Hoy = Date.From(DateTime.LocalNow()),
+				    Inicio = #date(Date.Year(Hoy) - 1, 1, 1),
+				    Fechas = List.Dates(Inicio, Duration.Days(Hoy - Inicio) + 1, #duration(1, 0, 0, 0)),
+				    Definiciones = {
+				        {"Hoy", 1, (f) => f = Hoy},
+				        {"7 días", 2, (f) => f > Date.AddDays(Hoy, -7)},
+				        {"30 días", 3, (f) => f > Date.AddDays(Hoy, -30)},
+				        {"Este mes", 4, (f) => Date.StartOfMonth(f) = Date.StartOfMonth(Hoy)},
+				        {"Mes ant.", 5, (f) => Date.StartOfMonth(f) = Date.StartOfMonth(Date.AddMonths(Hoy, -1))},
+				        {"Este año", 6, (f) => Date.Year(f) = Date.Year(Hoy)},
+				        {"Todo", 7, (f) => true}},
+				    Filas = List.Combine(List.Transform(Definiciones, (d) =>
+				        List.Transform(List.Select(Fechas, d{2}), (f) => {d{0}, d{1}, f}))),
+				    Tabla = #table(type table [Período = text, Orden = Int64.Type, Fecha = date], Filas)
+				in
+				    Tabla
+
+	annotation PBI_ResultType = Table
+

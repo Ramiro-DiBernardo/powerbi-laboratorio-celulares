@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Laboratorio de Celulares"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "53e8f9d9-3d16-5771-a5a2-70e3ecdb39b4"
+  }
+}

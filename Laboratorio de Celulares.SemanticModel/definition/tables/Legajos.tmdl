@@ -1,0 +1,82 @@
+table Legajos
+	isHidden
+	lineageTag: 79533988-fd1f-540b-b723-8b34b8b7b9b7
+
+	column Técnico
+		dataType: string
+		lineageTag: 245d70e4-31f4-50c6-bcc9-3b620d5fa796
+		summarizeBy: none
+		sourceColumn: Técnico
+
+		annotation SummarizationSetBy = Automatic
+
+	column Legajo
+		dataType: string
+		lineageTag: 4053de2f-5ea8-51bd-a057-39b7505eb30b
+		summarizeBy: none
+		sourceColumn: Legajo
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Legajos = m
+		mode: import
+		source =
+				let
+				    // ---- funciones auxiliares (ver comentarios en cada una)
+				    fxClave =
+				        // Texto comparable: MAYÚSCULAS, sin tildes, sin espacios duros/saltos de línea y con espacios simples
+				        (v as any) as nullable text =>
+				        let
+				            Texto =
+				                if v = null then null
+				                else if Value.Is(v, type number) then Number.ToText(v, "0", "en-US")
+				                else if Value.Is(v, type date) or Value.Is(v, type datetime) then Date.ToText(Date.From(v), [Format = "dd/MM/yyyy"])
+				                else Text.From(v),
+				            Pares = {{"Á", "A"}, {"À", "A"}, {"Ä", "A"}, {"Â", "A"}, {"É", "E"}, {"È", "E"}, {"Ë", "E"}, {"Ê", "E"},
+				                {"Í", "I"}, {"Ì", "I"}, {"Ï", "I"}, {"Î", "I"}, {"Ó", "O"}, {"Ò", "O"}, {"Ö", "O"}, {"Ô", "O"},
+				                {"Ú", "U"}, {"Ù", "U"}, {"Ü", "U"}, {"Û", "U"}, {"Ñ", "N"}, {"Ç", "C"}},
+				            Mayus = if Texto = null then null else Text.Upper(Texto),
+				            SinTildes = if Mayus = null then null else List.Accumulate(Pares, Mayus, (s, p) => Text.Replace(s, p{0}, p{1})),
+				            // separadores raros -> espacio; después se descarta todo lo que no sea ASCII imprimible
+				            Espacios = if SinTildes = null then null
+				                else Text.Combine(Text.SplitAny(SinTildes, "#(00A0)#(cr)#(lf)#(tab)"), " "),
+				            Ascii = if Espacios = null then null else Text.Select(Espacios, {" ".."~"}),
+				            Limpio = if Ascii = null then null else Text.Combine(List.Select(Text.Split(Ascii, " "), each _ <> ""), " ")
+				        in
+				            if Limpio = null or Limpio = "" then null else Limpio,
+				    fxBuscarCelda =
+				        // Posición (fila, columna, base 0) de la primera celda con ese texto dentro de las primeras 40 filas
+				        (datos as table, clave as text) as nullable record =>
+				        let
+				            Filas = List.Transform(Table.ToRows(Table.FirstN(datos, 40)), (f) => List.Transform(List.FirstN(f, 60), fxClave)),
+				            Pos = List.PositionOf(List.Transform(Filas, (f) => List.Contains(f, clave)), true)
+				        in
+				            if Pos < 0 then null else [Fila = Pos, Col = List.PositionOf(Filas{Pos}, clave)],
+				    fxTecnico =
+				        // Nombre canónico del técnico: el de su hoja ("Correa Bruno"), aunque lo hayan escrito "Bruno Correa"
+				        // Recibe la lista de hojas: si la leyera adentro, llamarla por fila reabriría el Excel en cada llamada.
+				        (t as any, nombres as list) as nullable text =>
+				        let
+				            Clave = (x) => let k = fxClave(x) in if k = null then null else Text.Combine(List.Sort(Text.Split(k, " ")), " "),
+				            k = Clave(t),
+				            Coinciden = List.Select(nombres, each Clave(_) = k)
+				        in
+				            if k = null then null else if List.IsEmpty(Coinciden) then Text.Proper(fxClave(t)) else Coinciden{0},
+				
+				    // Legajo de cada técnico (columna "Legajo" de la hoja mensual, nombre en la columna siguiente)
+				    Datos = HojaMensual,
+				    Celda = if Datos = null then null else fxBuscarCelda(Datos, "LEGAJO"),
+				    Filas = if Celda = null then {} else Table.ToRows(Table.Skip(Datos, Celda[Fila] + 1)),
+				    // el legajo puede venir como número o como texto ("11076")
+				    EsLegajo = (v) => v <> null and (Value.Is(v, type number)
+				        or (Value.Is(v, type text) and Text.Trim(v) <> "" and Text.Select(Text.Trim(v), {"0".."9"}) = Text.Trim(v))),
+				    Pares = List.Select(List.Transform(Filas, each {_{Celda[Col]}, _{Celda[Col] + 1}}),
+				        each EsLegajo(_{0}) and _{1} <> null and Value.Is(_{1}, type text)),
+				    Hojas = List.Buffer(NombresHojas),
+				    Tabla = Table.FromRows(List.Transform(Pares, each {fxTecnico(_{1}, Hojas), Text.Trim(Text.From(_{0}))}), type table [Técnico = text, Legajo = text]),
+				    Unicos = Table.Distinct(Table.SelectRows(Tabla, each [Técnico] <> null), {"Técnico"})
+				in
+				    Unicos
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,39 @@
+relationship 19416233-e1db-52a8-9552-413b74b6b229
+	fromColumn: Registros.Fecha
+	toColumn: Calendario.Fecha
+
+relationship 897a8332-5b62-5a7d-af71-16da3e519435
+	fromColumn: Registros.Técnico
+	toColumn: Técnicos.Técnico
+
+relationship bd1257c6-882f-5faa-a3a9-6b896f7f0439
+	fromColumn: Desbloqueos.Fecha
+	toColumn: Calendario.Fecha
+
+relationship 67a86fbc-b7c8-5629-8103-c7d1e523647d
+	fromColumn: Desbloqueos.Técnico
+	toColumn: Técnicos.Técnico
+
+relationship 0590eaa8-6f33-5cca-80e0-03aab3d3dbe6
+	fromColumn: 'Flujo laboratorio'.Fecha
+	toColumn: Calendario.Fecha
+
+relationship a3573de7-0e9b-5a66-9c43-7834ca7c09d9
+	crossFilteringBehavior: bothDirections
+	fromColumn: Fallas.ID
+	toColumn: Registros.ID
+
+relationship dc72a8b2-8aa4-5bcd-91ab-c19e2fc22353
+	fromColumn: Fallas.Categoría
+	toColumn: 'Categorías falla'.Categoría
+
+relationship 295a3a69-fbfc-5806-8245-c19dc29db872
+	crossFilteringBehavior: bothDirections
+	fromColumn: Alertas.ID
+	toColumn: Registros.ID
+
+relationship 593ff3ad-8e31-533b-8bc0-00be0e6d8474
+	crossFilteringBehavior: bothDirections
+	fromColumn: Periodos.Fecha
+	toColumn: Calendario.Fecha
+
